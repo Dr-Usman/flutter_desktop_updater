@@ -115,26 +115,23 @@ Future<void> main(List<String> args) async {
     exit(1);
   }
 
-  // Adiciona os argumentos extras ao final do distPath
-  String extraSuffix = extraArgs.isNotEmpty ? "-${extraArgs.join('_')}" : "";
-
   final distPath = platform == "windows"
       ? path.join(
           "dist",
           buildNumber,
-          "$appNamePubspec-$buildName+$buildNumber-$platform$extraSuffix",
+          "$appNamePubspec-$buildName+$buildNumber-$platform",
         )
       : platform == "macos"
           ? path.join(
               "dist",
               buildNumber,
-              "$appNamePubspec-$buildName+$buildNumber-$platform$extraSuffix",
+              "$appNamePubspec-$buildName+$buildNumber-$platform",
               "$appNamePubspec.app",
             )
           : path.join(
               "dist",
               buildNumber,
-              "$appNamePubspec-$buildName+$buildNumber-$platform$extraSuffix",
+              "$appNamePubspec-$buildName+$buildNumber-$platform",
             );
 
   final distDir = Directory(distPath);
