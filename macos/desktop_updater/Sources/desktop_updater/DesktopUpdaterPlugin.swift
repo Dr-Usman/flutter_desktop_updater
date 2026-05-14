@@ -12,6 +12,16 @@ public class DesktopUpdaterPlugin: NSObject, FlutterPlugin {
         let fileManager = FileManager.default
 
         let appBundlePath = Bundle.main.bundlePath
+        let appBundleURL = URL(fileURLWithPath: appBundlePath)
+        let appParentPath = appBundleURL.deletingLastPathComponent().path
+
+        // Preflight write access before stopping the app. Sandboxed apps often
+        // cannot modify bundles outside their container.
+        if !fileManager.isWritableFile(atPath: appParentPath) {
+            print("Updater abort: no write access to app parent path: \(appParentPath)")
+            return
+        }
+
         guard let executablePath = Bundle.main.executablePath else {
             print("Executable path not found")
             return

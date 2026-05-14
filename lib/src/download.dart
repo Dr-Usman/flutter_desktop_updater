@@ -35,7 +35,6 @@ Future<void> downloadFile(
   // Prepare file for writing
   final file = File(fullSavePath);
   final sink = file.openWrite();
-  var received = 0;
   final contentLength = response.contentLength ?? 0;
 
   // Listen to the HTTP response stream
@@ -44,12 +43,9 @@ Future<void> downloadFile(
       // Write chunk to file
       sink.add(chunk);
 
-      // Increment received bytes based on HTTP chunk
-      received += chunk.length;
-
       // Report progress
       if (progressCallback != null && contentLength != 0) {
-        final receivedKB = received / 1024;
+        final receivedKB = chunk.length / 1024;
         final totalKB = contentLength / 1024;
         progressCallback(receivedKB, totalKB);
       }
