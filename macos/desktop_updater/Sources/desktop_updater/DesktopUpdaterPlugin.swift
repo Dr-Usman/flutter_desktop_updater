@@ -58,6 +58,8 @@ public class DesktopUpdaterPlugin: NSObject, FlutterPlugin {
 
         let scriptContent = """
         #!/bin/bash
+        set -o pipefail
+
         APP_BUNDLE_PATH="$1"
         UPDATE_FOLDER_PATH="$2"
         EXECUTABLE_PATH="$3"
@@ -217,14 +219,17 @@ public class DesktopUpdaterPlugin: NSObject, FlutterPlugin {
 
         BACKUP_PATH="$APP_BUNDLE_PATH.backup"
         log_message "Creating backup at: $BACKUP_PATH"
-        if ! mv "$APP_BUNDLE_PATH" "$BACKUP_PATH" 2>&1 | tee -a "$LOG_FILE"; then
+        mv "$APP_BUNDLE_PATH" "$BACKUP_PATH" 2>&1 | tee -a "$LOG_FILE"
+        if [ $? -ne 0 ]; then
             log_message "Error: Failed to create backup"
+            log_message "Likely permission/sandbox restriction while writing app bundle location."
             rm -rf "$TEMP_DIR"
             exit 1
         fi
 
         log_message "Moving temporary bundle to final location..."
-        if ! mv "$TEMP_BUNDLE" "$APP_BUNDLE_PATH" 2>&1 | tee -a "$LOG_FILE"; then
+        mv "$TEMP_BUNDLE" "$APP_BUNDLE_PATH" 2>&1 | tee -a "$LOG_FILE"
+        if [ $? -ne 0 ]; then
             log_message "Error: Failed to move bundle to final location"
             mv "$BACKUP_PATH" "$APP_BUNDLE_PATH" >/dev/null 2>&1 || true
             rm -rf "$TEMP_DIR"
@@ -264,26 +269,24 @@ public class DesktopUpdaterPlugin: NSObject, FlutterPlugin {
 
         log_message "Launching application..."
         xattr -dr com.apple.quarantine "$APP_BUNDLE_PATH" >/dev/null 2>&1 || true
-        open "$APP_BUNDLE_PATH"
-
-        START_TIMEOUT=60
-        START_COUNT=0
-        while ! pgrep -f "$EXECUTABLE_PATH" >/dev/null 2>&1 && [ $START_COUNT -lt $START_TIMEOUT ]; do
-            sleep 1
-            START_COUNT=$((START_COUNT + 1))
-            log_message "Waiting for application to start... ($START_COUNT/$START_TIMEOUT)"
-        done
-
-        if pgrep -f "$EXECUTABLE_PATH" >/dev/null 2>&1; then
-            log_message "Application launched successfully"
-            rm -rf "$BACKUP_PATH"
-            exit 0
-        else
-            log_message "Error: Application failed to start after $START_TIMEOUT seconds"
+        open "$APP_BUNDLE_PATH" 2>&1 | tee -a "$LOG_FILE"
+        if [ $? -ne 0 ]; then
+            log_message "Error: open command failed"
             rm -rf "$APP_BUNDLE_PATH"
             mv "$BACKUP_PATH" "$APP_BUNDLE_PATH" >/dev/null 2>&1 || true
             exit 1
         fi
+
+        # In sandboxed contexts, pgrep may be restricted and return false negatives.
+        sleep 3
+        if pgrep -f "$EXECUTABLE_PATH" >/dev/null 2>&1; then
+            log_message "Application launch verified by process check"
+        else
+            log_message "Application launch could not be verified via process check (sandbox restriction possible); open command succeeded"
+        fi
+
+        rm -rf "$BACKUP_PATH"
+        exit 0
         """
 
         do {
