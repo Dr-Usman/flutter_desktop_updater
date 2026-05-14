@@ -32,7 +32,8 @@ Future<String?> _getBundleIdFromInfoPlist() async {
     ).firstMatch(content);
 
     return bundleIdMatch?.group(1);
-  } catch (_) {
+  } catch (e) {
+    print("Warning: Could not read Info.plist: $e");
     return null;
   }
 }
