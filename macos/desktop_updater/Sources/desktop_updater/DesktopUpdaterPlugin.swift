@@ -206,7 +206,7 @@ public class DesktopUpdaterPlugin: NSObject, FlutterPlugin {
         if [ ! -x "$TEMP_EXECUTABLE" ]; then
             log_message "Primary chmod did not produce executable bit. Applying fallback chmod on Contents/MacOS"
             if [ -d "$DEST_DIR/MacOS" ]; then
-                find "$DEST_DIR/MacOS" -type f -exec chmod +x {} \; 2>&1 | tee -a "$LOG_FILE"
+                find "$DEST_DIR/MacOS" -type f -exec chmod +x {} \\; 2>&1 | tee -a "$LOG_FILE"
             fi
         fi
 
