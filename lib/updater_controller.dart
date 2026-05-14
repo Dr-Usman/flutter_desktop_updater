@@ -112,7 +112,7 @@ class DesktopUpdaterController extends ChangeNotifier {
       throw Exception("Folder URL is not set");
     }
 
-    if (_changedFiles == null && _changedFiles!.isEmpty) {
+    if (_changedFiles == null || _changedFiles!.isEmpty) {
       throw Exception("Changed files are not set");
     }
 

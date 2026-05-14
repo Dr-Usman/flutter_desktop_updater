@@ -5,13 +5,14 @@ import "package:desktop_updater/desktop_updater.dart";
 import "package:desktop_updater/src/download.dart";
 import "package:path/path.dart" as path;
 
+/// Gets bundle identifier from Info.plist (macOS)
 Future<String?> _getBundleIdFromInfoPlist() async {
   if (!Platform.isMacOS) return null;
 
   try {
     final executablePath = Platform.resolvedExecutable;
     final bundleMatch = RegExp(
-      r"^(.+\\.app)/Contents/",
+      r"^(.+\.app)/Contents/",
     ).firstMatch(executablePath);
 
     if (bundleMatch == null) return null;
@@ -26,7 +27,7 @@ Future<String?> _getBundleIdFromInfoPlist() async {
 
     final content = await infoPlistFile.readAsString();
     final bundleIdMatch = RegExp(
-      r"<key>CFBundleIdentifier</key>\\s*<string>([^<]+)</string>",
+      r"<key>CFBundleIdentifier</key>\s*<string>([^<]+)</string>",
       caseSensitive: false,
     ).firstMatch(content);
 
@@ -107,7 +108,7 @@ Future<Stream<UpdateProgress>> updateAppFunction({
             downloadFile(
               remoteUpdateFolder,
               file.filePath,
-              dir.path,
+              downloadPath,
               (received, total) {
                 receivedBytes += received;
                 responseStream.add(
