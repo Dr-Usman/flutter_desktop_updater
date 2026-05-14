@@ -45,7 +45,7 @@ Future<void> downloadFile(
       sink.add(chunk);
 
       // Increment received bytes based on HTTP chunk
-      received = chunk.length;
+      received += chunk.length;
 
       // Report progress
       if (progressCallback != null && contentLength != 0) {
@@ -56,6 +56,25 @@ Future<void> downloadFile(
     },
     onDone: () async {
       await sink.close();
+
+      if (Platform.isMacOS && filePath.startsWith("MacOS/")) {
+        try {
+          final chmodResult = await Process.run("chmod", [
+            "+x",
+            fullSavePath,
+          ]);
+          if (chmodResult.exitCode != 0) {
+            print(
+              "Warning: chmod failed for $fullSavePath: ${chmodResult.stderr}",
+            );
+          }
+        } catch (e) {
+          print(
+            "Warning: could not set executable permission for $fullSavePath: $e",
+          );
+        }
+      }
+
       client.close();
       print("File downloaded to $fullSavePath");
     },

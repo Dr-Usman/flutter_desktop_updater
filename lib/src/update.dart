@@ -3,6 +3,38 @@ import "dart:io";
 
 import "package:desktop_updater/desktop_updater.dart";
 import "package:desktop_updater/src/download.dart";
+import "package:path/path.dart" as path;
+
+Future<String?> _getBundleIdFromInfoPlist() async {
+  if (!Platform.isMacOS) return null;
+
+  try {
+    final executablePath = Platform.resolvedExecutable;
+    final bundleMatch = RegExp(
+      r"^(.+\\.app)/Contents/",
+    ).firstMatch(executablePath);
+
+    if (bundleMatch == null) return null;
+
+    final bundlePath = bundleMatch.group(1);
+    if (bundlePath == null) return null;
+
+    final infoPlistPath = path.join(bundlePath, "Contents", "Info.plist");
+    final infoPlistFile = File(infoPlistPath);
+
+    if (!await infoPlistFile.exists()) return null;
+
+    final content = await infoPlistFile.readAsString();
+    final bundleIdMatch = RegExp(
+      r"<key>CFBundleIdentifier</key>\\s*<string>([^<]+)</string>",
+      caseSensitive: false,
+    ).firstMatch(content);
+
+    return bundleIdMatch?.group(1);
+  } catch (_) {
+    return null;
+  }
+}
 
 /// Modified updateAppFunction to return a stream of UpdateProgress.
 /// The stream emits total kilobytes, received kilobytes, and the currently downloading file's name.
@@ -27,6 +59,29 @@ Future<Stream<UpdateProgress>> updateAppFunction({
 
   try {
     if (await dir.exists()) {
+      var downloadPath = dir.path;
+
+      if (Platform.isMacOS) {
+        final home = Platform.environment["HOME"];
+        final bundleId = await _getBundleIdFromInfoPlist();
+
+        if (home != null && bundleId != null) {
+          downloadPath = path.join(
+            home,
+            "Library",
+            "Application Support",
+            bundleId,
+            "updates",
+          );
+        }
+      }
+
+      final updateFolder = Directory(path.join(downloadPath, "update"));
+      if (await updateFolder.exists()) {
+        await updateFolder.delete(recursive: true);
+      }
+      await updateFolder.create(recursive: true);
+
       if (changes.isEmpty) {
         print("No updates required.");
         await responseStream.close();
