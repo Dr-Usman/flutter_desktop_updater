@@ -211,22 +211,20 @@ public class DesktopUpdaterPlugin: NSObject, FlutterPlugin {
         fi
 
         if [ ! -x "$TEMP_EXECUTABLE" ]; then
-            log_message "Error: Temporary executable still not executable"
+            log_message "Warning: Temporary executable is not executable in TEMP_DIR (possible noexec mount). Will continue and verify again after moving bundle."
             ls -la "$(dirname "$TEMP_EXECUTABLE")" | tee -a "$LOG_FILE"
-            rm -rf "$TEMP_DIR"
-            exit 1
         fi
 
         BACKUP_PATH="$APP_BUNDLE_PATH.backup"
         log_message "Creating backup at: $BACKUP_PATH"
-        if ! mv "$APP_BUNDLE_PATH" "$BACKUP_PATH"; then
+        if ! mv "$APP_BUNDLE_PATH" "$BACKUP_PATH" 2>&1 | tee -a "$LOG_FILE"; then
             log_message "Error: Failed to create backup"
             rm -rf "$TEMP_DIR"
             exit 1
         fi
 
         log_message "Moving temporary bundle to final location..."
-        if ! mv "$TEMP_BUNDLE" "$APP_BUNDLE_PATH"; then
+        if ! mv "$TEMP_BUNDLE" "$APP_BUNDLE_PATH" 2>&1 | tee -a "$LOG_FILE"; then
             log_message "Error: Failed to move bundle to final location"
             mv "$BACKUP_PATH" "$APP_BUNDLE_PATH" >/dev/null 2>&1 || true
             rm -rf "$TEMP_DIR"
@@ -238,6 +236,20 @@ public class DesktopUpdaterPlugin: NSObject, FlutterPlugin {
             mv "$BACKUP_PATH" "$APP_BUNDLE_PATH" >/dev/null 2>&1 || true
             rm -rf "$TEMP_DIR"
             exit 1
+        fi
+
+        FINAL_EXECUTABLE="$APP_BUNDLE_PATH/Contents/MacOS/$EXECUTABLE_NAME"
+        if [ ! -f "$FINAL_EXECUTABLE" ]; then
+            log_message "Error: Final executable missing after swap: $FINAL_EXECUTABLE"
+            mv "$BACKUP_PATH" "$APP_BUNDLE_PATH" >/dev/null 2>&1 || true
+            rm -rf "$TEMP_DIR"
+            exit 1
+        fi
+
+        chmod -v +x "$FINAL_EXECUTABLE" 2>&1 | tee -a "$LOG_FILE" || true
+        if [ ! -x "$FINAL_EXECUTABLE" ]; then
+            log_message "Warning: Final executable is still not executable for current process"
+            ls -la "$APP_BUNDLE_PATH/Contents/MacOS" | tee -a "$LOG_FILE"
         fi
 
         rm -rf "$TEMP_DIR"
