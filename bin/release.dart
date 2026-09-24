@@ -56,14 +56,15 @@ Future<void> main(List<String> args) async {
     exit(1);
   }
 
+  // Use Flutter's official version flags. Passing FLUTTER_BUILD_NAME /
+  // FLUTTER_BUILD_NUMBER via --dart-define fails on Flutter 3.47+ because
+  // those names are reserved by the framework.
   final buildCommand = <String>[
     flutterBinPath,
     "build",
     platform,
-    "--dart-define",
-    "FLUTTER_BUILD_NAME=$buildName",
-    "--dart-define",
-    "FLUTTER_BUILD_NUMBER=$buildNumber",
+    "--build-name=$buildName",
+    "--build-number=$buildNumber",
     ...extraArgs,
   ];
 
